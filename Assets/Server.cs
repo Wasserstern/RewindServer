@@ -15,6 +15,7 @@ public class Server : MonoBehaviour
     public float ticksPerSecond;
     public int playerCount;
     public float maxMoveDistancePerTick;
+    public GameObject playerPrefab;
     
 
     // Runtime variables
@@ -124,8 +125,13 @@ public class Server : MonoBehaviour
     private void StartGame(){
         foreach(ClientInformation info in clientInformationList)
         {
+            // Spawn player objects in server side simulation
+            GameObject player = Instantiate(playerPrefab);
+            player.transform.position = info.currentPosition;
+            player.name = info.username;
             try{
-                ServerGameStartedMessage serverGameStartedMessage = new ServerGameStartedMessage();
+                WorldState initialWorldState = new WorldState(clientInformationList, 0f);
+                ServerGameStartedMessage serverGameStartedMessage = new ServerGameStartedMessage(initialWorldState);
                 string msg = "SERVERGAMESTARTEDMESSAGE%" + JsonUtility.ToJson(serverGameStartedMessage);
                 byte[] bytes = Encoding.UTF8.GetBytes(msg);
                 // TODO: Check if this blocking call fucks up Unitys main thread completely or just blocks for a short time
@@ -133,6 +139,7 @@ public class Server : MonoBehaviour
             }
             catch(SocketException e){
                 Debug.Log("Error when sending start mesage to client: " + e.Message);
+                //TODO: Remove client connection
             }
 
         }
@@ -198,6 +205,7 @@ public class Server : MonoBehaviour
                                 // Add move message to queue and handle later
                                 ClientMovedMessage clientMovedMesssage = JsonUtility.FromJson<ClientMovedMessage>(json);
                                 clientMovedMessageQueue.Enqueue(clientMovedMesssage);
+                                
                                 break;
                             }
                             case "TESTMESSAGE":{
